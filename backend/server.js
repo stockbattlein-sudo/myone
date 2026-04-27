@@ -61,7 +61,7 @@ const sendEmail = async (to, subject, html) => {
     if (!transporter) return;
     try {
         await transporter.sendMail({
-            from: process.env.OWNER_EMAIL,
+            from: process.env.EMAIL_PROVIDER === 'resend' ? 'StockLeague <onboarding@resend.dev>' : process.env.OWNER_EMAIL,
             to,
             subject,
             html
