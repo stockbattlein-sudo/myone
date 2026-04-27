@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { joinWaitlist, getWaitlistCount, getAdminWaitlist } from './api';
+import { Analytics } from '@vercel/analytics/react';
 import './index.css';
 
 // Custom hook for counting up
@@ -617,6 +618,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/admin" element={<Admin />} />
         </Routes>
+        <Analytics />
     </BrowserRouter>
 );
 
