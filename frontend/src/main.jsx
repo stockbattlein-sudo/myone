@@ -1,623 +1,535 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { joinWaitlist, getWaitlistCount, getAdminWaitlist } from './api';
 import './index.css';
 
-// Custom hook for counting up
-const useCountUp = (end, duration = 2000, isVisible = true) => {
-    const [count, setCount] = useState(0);
+// Cursor
+const Cursor = () => {
+  const [pos, setPos] = useState({ x: -100, y: -100 });
+  const ringPos = useRef({ x: -100, y: -100 });
+  const ringRef = useRef(null);
 
-    useEffect(() => {
-        if (!isVisible) return;
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            setCount(Math.floor(progress * end));
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    }, [end, duration, isVisible]);
-
-    return count;
-};
-
-// Particles Component
-const Particles = () => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return null;
-
-    const particles = Array.from({ length: 15 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}vw`,
-        animationDuration: `${Math.random() * 10 + 10}s`,
-        animationDelay: `${Math.random() * 5}s`,
-        text: ['+2.4%', '₹1,240', '▲0.8%'][Math.floor(Math.random() * 3)]
-    }));
-
-    return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-            {particles.map(p => (
-                <div key={p.id} className="particle" style={{
-                    left: p.left,
-                    animation: `floatUp ${p.animationDuration} linear ${p.animationDelay} infinite`,
-                }}>
-                    {p.text}
-                </div>
-            ))}
-        </div>
-    );
-};
-
-// Ticker Component
-const Ticker = () => {
-    const items = [
-        { name: 'RELIANCE', change: '+1.2%', up: true },
-        { name: 'TCS', change: '-0.8%', up: false },
-        { name: 'INFY', change: '+2.1%', up: true },
-        { name: 'HDFCBANK', change: '+0.4%', up: true },
-        { name: 'BAJFINANCE', change: '-1.5%', up: false },
-        { name: 'TATAMOTORS', change: '+3.2%', up: true },
-        { name: 'ZOMATO', change: '+1.8%', up: true },
-        { name: 'WIPRO', change: '-0.3%', up: false }
-    ];
-
-    const repeatedItems = [...items, ...items, ...items, ...items];
-
-    return (
-        <div className="ticker-wrap">
-            <div className="ticker-content">
-                {repeatedItems.map((item, i) => (
-                    <span key={i} className={`ticker-item ${item.up ? 'up' : 'down'}`}>
-                        {item.name} {item.change} ·
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const Navbar = () => {
-    const [scrolled, setScrolled] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 60);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    const scrollToForm = () => {
-        document.getElementById('waitlist-form')?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setPos({ x: e.clientX, y: e.clientY });
     };
 
-    return (
-        <nav style={{
-            position: 'fixed',
-            top: 0, width: '100%', zIndex: 50,
-            padding: '20px 40px',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            background: scrolled ? 'rgba(11,14,17,0.95)' : 'transparent',
-            backdropFilter: scrolled ? 'blur(12px)' : 'none',
-            transition: 'background 0.3s, backdrop-filter 0.3s',
-            borderBottom: scrolled ? '1px solid var(--border)' : 'none'
-        }}>
-            <div>
-                <h1 style={{ fontSize: '24px' }}>
-                    <span style={{ color: 'var(--accent)' }}>STOCK</span><span style={{ color: '#FFF' }}>LEAGUE</span>
-                </h1>
-                <div style={{ fontSize: '10px', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                    Fantasy Stock Market
-                </div>
-            </div>
-            <button onClick={scrollToForm} style={{
-                background: 'var(--accent)', color: '#fff', padding: '10px 24px', borderRadius: '100px',
-                fontWeight: '600', fontSize: '14px', transition: 'transform 0.2s',
-            }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
-                Join Waitlist
-            </button>
-        </nav>
-    );
+    let animationFrameId;
+    const animRing = () => {
+      ringPos.current.x += (pos.x - ringPos.current.x) * 0.13;
+      ringPos.current.y += (pos.y - ringPos.current.y) * 0.13;
+      if (ringRef.current) {
+        ringRef.current.style.left = ringPos.current.x + 'px';
+        ringRef.current.style.top = ringPos.current.y + 'px';
+      }
+      animationFrameId = requestAnimationFrame(animRing);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    animRing();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [pos.x, pos.y]);
+
+  useEffect(() => {
+    const handleEnter = () => {
+      if(ringRef.current) {
+        ringRef.current.style.transform = 'translate(-50%,-50%) scale(1.8)';
+        ringRef.current.style.borderColor = 'rgba(0,212,106,0.55)';
+      }
+    };
+    const handleLeave = () => {
+      if(ringRef.current) {
+        ringRef.current.style.transform = 'translate(-50%,-50%) scale(1)';
+        ringRef.current.style.borderColor = 'rgba(0,212,106,0.35)';
+      }
+    };
+
+    const interactables = document.querySelectorAll('button,a,select,input,.faq-item');
+    interactables.forEach(el => {
+      el.addEventListener('mouseenter', handleEnter);
+      el.addEventListener('mouseleave', handleLeave);
+    });
+
+    return () => {
+      interactables.forEach(el => {
+        el.removeEventListener('mouseenter', handleEnter);
+        el.removeEventListener('mouseleave', handleLeave);
+      });
+    };
+  });
+
+  return (
+    <>
+      <div className="cursor" style={{ left: pos.x + 'px', top: pos.y + 'px' }}></div>
+      <div className="cursor-ring" ref={ringRef}></div>
+    </>
+  );
 };
+
+const Navbar = () => (
+  <nav>
+    <div className="logo">Stock<span>Battle</span></div>
+    <div className="nav-right">
+      <div className="nav-dot"></div>
+      <div className="nav-tag">COMING SOON — 2026</div>
+    </div>
+  </nav>
+);
+
+const Ticker = () => {
+  const stocks = [
+    {sym:'RELIANCE',p:'2847.35',c:'+1.24%',up:true},{sym:'TCS',p:'3921.10',c:'+0.87%',up:true},
+    {sym:'INFY',p:'1456.80',c:'-0.43%',up:false},{sym:'HDFC BANK',p:'1623.45',c:'+0.62%',up:true},
+    {sym:'NIFTY 50',p:'22,456',c:'+0.94%',up:true},{sym:'WIPRO',p:'487.20',c:'-0.21%',up:false},
+    {sym:'BAJFINANCE',p:'6834.50',c:'+1.87%',up:true},{sym:'ITC',p:'432.15',c:'+0.33%',up:true},
+    {sym:'SUNPHARMA',p:'1234.60',c:'-0.56%',up:false},{sym:'TATAMOTORS',p:'876.40',c:'+2.14%',up:true},
+    {sym:'ADANIPORTS',p:'1098.75',c:'+0.78%',up:true},{sym:'SENSEX',p:'74,123',c:'+0.91%',up:true},
+  ];
+  const items = [...stocks, ...stocks];
+
+  return (
+    <div className="ticker-wrap">
+      <div className="ticker">
+        {items.map((s, i) => (
+          <div key={i} className="tick-item">
+            <span className="tick-sym">{s.sym}</span>
+            <span className={s.up ? 'tick-up' : 'tick-dn'}>{s.p}</span>
+            <span className={s.up ? 'tick-up' : 'tick-dn'}>{s.up ? '▲' : '▼'} {s.c}</span>
+            <span className="tick-sep">·</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const LiveBar = () => (
+  <div className="live-bar">
+    <div className="live-badge"><div className="live-dot"></div>Live Waitlist Open</div>
+    <div className="live-items">
+      <div className="live-item">Tournaments: <span>Weekly &amp; Monthly</span></div>
+      <div className="live-item">Prize Pool: <span>₹5,000 weekly</span></div>
+      <div className="live-item">Platform: <span>Free to join</span></div>
+    </div>
+  </div>
+);
 
 const Hero = () => {
-    const [totalCount, setTotalCount] = useState(0);
-    const count = useCountUp(totalCount || 1247, 2000, !!totalCount);
+  const [totalCount, setTotalCount] = useState(247);
+  const [displayedCount, setDisplayedCount] = useState(0);
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', exp: '' });
+  const [status, setStatus] = useState('idle'); // idle, loading, success
+  const [position, setPosition] = useState(null);
+  const [shakeField, setShakeField] = useState(null);
 
-    useEffect(() => {
-        getWaitlistCount().then(res => setTotalCount(res.count)).catch(console.error);
-    }, []);
+  useEffect(() => {
+    getWaitlistCount().then(res => {
+      if (res && res.count) {
+        setTotalCount(res.count);
+      }
+    }).catch(() => {});
+  }, []);
 
-    const scrollToForm = () => {
-        document.getElementById('waitlist-form')?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    return (
-        <section style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 20px', overflow: 'hidden' }}>
-            <Particles />
-            <div style={{ zIndex: 10, maxWidth: '800px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{
-                    background: 'var(--gold-dim)', color: 'var(--gold)', padding: '8px 16px', borderRadius: '100px', fontSize: '14px', fontWeight: '600', border: '1px solid rgba(255,214,0,0.3)'
-                }}>
-                    🏆 India's First Fantasy Stock Market
-                </motion.div>
-                
-                <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={{ fontSize: 'clamp(44px, 6vw, 72px)', lineHeight: '1.1' }}>
-                    Pick Stocks.<br/>Build Portfolios.<br/><span style={{ color: 'var(--gold)' }}>Win Real Prizes.</span>
-                </motion.h1>
-
-                <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} style={{ color: 'var(--text-muted)', fontSize: '18px', maxWidth: '520px', lineHeight: '1.5' }}>
-                    StockLeague is launching soon. Compete in daily NSE contests, beat 10,000+ players, and win real cash — no real money at risk.
-                </motion.p>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} style={{
-                    background: 'var(--bg2)', padding: '12px 24px', borderRadius: '100px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px'
-                }}>
-                    <span className="pulse">🟢</span> <span className="mono" style={{ color: 'var(--text)' }}>{count.toLocaleString('en-IN')}</span> traders already on the list
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
-                    <button onClick={scrollToForm} style={{
-                        background: 'linear-gradient(135deg, #00C853 0%, #00E676 100%)', color: '#fff', padding: '18px 40px', borderRadius: '100px',
-                        fontWeight: '700', fontSize: '18px', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(0,200,83,0.2)', border: '1px solid rgba(255,255,255,0.2)'
-                    }} onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 0 24px rgba(0,200,83,0.4)'; }} onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,200,83,0.2)'; }}>
-                        Secure Your Early Access →
-                    </button>
-                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Early members get exclusive launch pricing + first contest free</span>
-                </motion.div>
-            </div>
-            <Ticker />
-        </section>
-    );
-};
-
-const Stats = () => {
-    const ref = useRef(null);
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) setIsVisible(true);
-        }, { threshold: 0.5 });
-        if (ref.current) observer.observe(ref.current);
-        return () => observer.disconnect();
-    }, []);
-
-    const prizeCount = useCountUp(5000000, 2500, isVisible);
-    const playerCount = useCountUp(10000, 2000, isVisible);
-    const winCount = useCountUp(20, 1500, isVisible);
-
-    return (
-        <section ref={ref} style={{
-            background: 'var(--bg2)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
-            padding: '40px 20px', display: 'flex', justifyContent: 'center'
-        }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around', width: '100%', maxWidth: '1000px', gap: '40px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: 'var(--gold)', fontSize: '48px', fontWeight: '700', fontFamily: 'var(--font-display)' }}>
-                        <span className="mono">₹</span>{prizeCount.toLocaleString('en-IN')}+
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Total Prize Pool</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: 'var(--gold)', fontSize: '48px', fontWeight: '700', fontFamily: 'var(--font-display)' }}>
-                        {playerCount.toLocaleString('en-IN')}+
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Players Joining</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: 'var(--gold)', fontSize: '48px', fontWeight: '700', fontFamily: 'var(--font-display)' }}>
-                        Top {winCount}%
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Winners Paid</div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const HowItWorks = () => {
-    const cards = [
-        { icon: '📋', title: 'Build Your Portfolio', desc: 'Pick 5–10 NSE stocks, assign weights. Total must equal 100%. Max 30% in any single stock.' },
-        { icon: '⚔️', title: 'Join a Contest', desc: 'Enter free or paid daily/weekly contests. Compete against thousands of traders across India.' },
-        { icon: '🏆', title: 'Win Real Prizes', desc: "Your portfolio's real-time performance determines your score. Top rankers win real cash via UPI." }
-    ];
-
-    return (
-        <section style={{ padding: '100px 20px', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '40px', marginBottom: '8px' }}>How StockLeague Works</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '48px', fontSize: '18px' }}>Three steps to your first win</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-                {cards.map((c, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-100px' }} transition={{ delay: i * 0.15 }} style={{
-                        background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', flex: '1 1 300px', maxWidth: '350px',
-                        textAlign: 'left', transition: 'box-shadow 0.3s, border-color 0.3s'
-                    }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 20px var(--accent-glow)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}>
-                        <div style={{ fontSize: '40px', marginBottom: '16px' }}>{c.icon}</div>
-                        <h3 style={{ fontSize: '24px', marginBottom: '12px' }}>{c.title}</h3>
-                        <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>{c.desc}</p>
-                    </motion.div>
-                ))}
-            </div>
-        </section>
-    );
-};
-
-const ContestPreview = () => {
-    const contests = [
-        { type: 'FREE DAILY', color: '#2979FF', pool: '₹10,000', entry: 'FREE', filled: 8421, total: 10000, ends: '02:14:33' },
-        { type: 'MEGA LEAGUE', color: '#00E676', pool: '₹5,00,000', entry: '₹49', filled: 4120, total: 50000, ends: '05:30:00' },
-        { type: 'HIGH ROLLER', color: '#FF9100', pool: '₹1,00,000', entry: '₹99', filled: 850, total: 1500, ends: '01:45:12' },
-        { type: 'CHAMPIONS', color: '#D500F9', pool: '₹2,50,000', entry: '₹199', filled: 120, total: 1500, ends: '12:00:00' }
-    ];
-
-    return (
-        <section style={{ padding: '80px 20px', background: 'var(--bg2)', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '40px', marginBottom: '48px' }}>What You'll Be Playing</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px', maxWidth: '1000px', margin: '0 auto' }}>
-                {contests.map((c, i) => (
-                    <div key={i} style={{
-                        background: 'var(--bg)', border: `1px solid ${c.color}40`, borderRadius: '12px', padding: '24px', flex: '1 1 300px', maxWidth: '400px', textAlign: 'left', position: 'relative'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div style={{ color: c.color, fontSize: '14px', fontWeight: '700', letterSpacing: '1px' }}>
-                                <span className="pulse" style={{ display: 'inline-block', marginRight: '6px' }}>●</span> {c.type}
-                            </div>
-                            <div style={{ background: 'var(--bg2)', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>LIVE</div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div>
-                                <div style={{ fontSize: '24px', fontWeight: '700', fontFamily: 'var(--font-display)', color: 'var(--gold)' }}>{c.pool}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Prize Pool</div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '20px', fontWeight: '600' }}>{c.entry}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Entry</div>
-                            </div>
-                        </div>
-                        <div style={{ marginBottom: '8px' }}>
-                            <div style={{ width: '100%', height: '6px', background: 'var(--bg3)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ width: `${(c.filled/c.total)*100}%`, height: '100%', background: c.color }}></div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>{c.filled.toLocaleString('en-IN')}/{c.total.toLocaleString('en-IN')}</span>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
-                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Ends in: <span className="mono" style={{ color: 'var(--text)' }}>{c.ends}</span></div>
-                            <button disabled style={{ background: 'var(--bg3)', color: 'var(--text-muted)', padding: '8px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'not-allowed' }} title="Coming Soon">
-                                JOIN →
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <p style={{ marginTop: '40px', color: 'var(--text-muted)' }}>Be on the waitlist to get first access when we go live 🚀</p>
-        </section>
-    );
-};
-
-const WaitlistForm = () => {
-    const [step, setStep] = useState(1);
-    const [experience, setExperience] = useState('');
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [status, setStatus] = useState('idle'); // idle, loading, error, success, duplicate
-    const [position, setPosition] = useState(null);
-    const [errorMsg, setErrorMsg] = useState('');
-
-    const options = [
-        "I actively trade stocks",
-        "I'm learning about markets",
-        "I play fantasy sports (Dream11 etc.)",
-        "I'm completely new to investing"
-    ];
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-            setErrorMsg('Please enter a valid email address');
-            return;
+  useEffect(() => {
+    let animationFrameId;
+    const animCount = () => {
+      setDisplayedCount(prev => {
+        if (prev < totalCount) {
+          return Math.min(prev + Math.ceil((totalCount - prev) / 8), totalCount);
         }
-        setStatus('loading');
-        setErrorMsg('');
+        return prev;
+      });
+      animationFrameId = requestAnimationFrame(animCount);
+    };
+    const timeoutId = setTimeout(animCount, 700);
+    return () => {
+      clearTimeout(timeoutId);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [totalCount]);
 
-        try {
-            const res = await joinWaitlist({ name, email, marketExperience: experience });
-            if (res.success) {
-                setPosition(res.position);
-                setStatus(res.alreadyJoined ? 'duplicate' : 'success');
-                if (window.posthog) {
-                    window.posthog.capture('waitlist_joined', { market_experience: experience, position: res.position });
-                }
-            } else {
-                setStatus('error');
-                setErrorMsg(res.message || 'Something went wrong. Please try again.');
-            }
-        } catch (err) {
-            setStatus('error');
-            setErrorMsg('Something went wrong. Please try again.');
-        }
+  const triggerShake = (field) => {
+    setShakeField(field);
+    setTimeout(() => setShakeField(null), 1600);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const { name, phone, email, exp } = formData;
+    if(!name.trim()){ triggerShake('name'); return; }
+    if(phone.length!==10 || isNaN(phone)){ triggerShake('phone'); return; }
+    if(!email.includes('@') || !email.includes('.')){ triggerShake('email'); return; }
+    if(!exp){ triggerShake('exp'); return; }
+
+    setStatus('loading');
+
+    const expMap = {
+      'beginner': "I'm completely new to investing",
+      'some': "I'm learning about markets",
+      'active': "I actively trade stocks",
+      'pro': "I actively trade stocks"
     };
 
-    const handleShareWA = () => {
-        window.open('https://wa.me/?text=' + encodeURIComponent("I just joined the StockLeague waitlist — India's fantasy stock market! Join here: https://stockleague.vercel.app"));
-    };
+    try {
+      const res = await joinWaitlist({ 
+        name: name.trim(), 
+        email: email.trim(), 
+        marketExperience: expMap[exp] || exp 
+      });
 
-    const handleCopy = (e) => {
-        navigator.clipboard.writeText("https://stockleague.vercel.app");
-        const btn = e.currentTarget;
-        const oldText = btn.innerText;
-        btn.innerText = "Copied! ✓";
-        setTimeout(() => btn.innerText = oldText, 2000);
-    };
+      if (res.success) {
+        setPosition(res.position);
+        setTotalCount(prev => prev + 1);
+        setStatus('success');
+      } else {
+        setStatus('idle');
+        alert(res.message || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      setStatus('idle');
+      alert('Something went wrong. Please try again.');
+    }
+  };
 
-    return (
-        <section id="waitlist-form" style={{ padding: '100px 20px', background: '#0D1F14', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ background: 'var(--bg2)', maxWidth: '560px', width: '100%', borderRadius: '24px', padding: '40px', border: '1px solid var(--accent-glow)', boxShadow: '0 0 40px rgba(0,200,83,0.05)' }}>
-                <AnimatePresence mode="wait">
-                    {status === 'success' || status === 'duplicate' ? (
-                        <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '64px', marginBottom: '24px' }}>{status === 'duplicate' ? '🙌' : '✅'}</div>
-                            {status === 'duplicate' ? (
-                                <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>You're already on the list!</h2>
-                            ) : (
-                                <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>You're #{position?.toLocaleString('en-IN')} on the list!</h2>
-                            )}
-                            <p style={{ color: 'var(--text-muted)', fontSize: '18px', marginBottom: '32px', lineHeight: '1.5' }}>
-                                We'll email you the moment StockLeague goes live.<br/>
-                                You get: First contest FREE + ₹100 bonus credits 🎉
-                            </p>
-                            <div style={{ background: 'var(--bg3)', padding: '24px', borderRadius: '16px' }}>
-                                <div style={{ fontWeight: '600', marginBottom: '16px' }}>Share with a friend → get bumped up the list</div>
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                    <button onClick={handleShareWA} style={{ background: '#25D366', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: '600' }}>Share on WhatsApp</button>
-                                    <button onClick={handleCopy} style={{ background: 'var(--border)', color: 'var(--text)', padding: '12px 24px', borderRadius: '8px', fontWeight: '600' }}>Copy Link</button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <h2 style={{ fontSize: '32px', textAlign: 'center', marginBottom: '8px' }}>Join the Waitlist</h2>
-                            <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '40px' }}>Answer one quick question, drop your email — we'll reach you first.</p>
-                            
-                            <div style={{ marginBottom: '32px' }}>
-                                <label style={{ display: 'block', marginBottom: '16px', fontWeight: '600' }}>What's your current relationship with the stock market?</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                                    {options.map(opt => (
-                                        <button key={opt} onClick={() => { setExperience(opt); setStep(2); }} style={{
-                                            padding: '16px', borderRadius: '12px', border: `2px solid ${experience === opt ? 'var(--accent)' : 'var(--border)'}`,
-                                            background: experience === opt ? 'var(--accent-glow)' : 'transparent', color: 'var(--text)', textAlign: 'left', transition: 'all 0.2s'
-                                        }}>
-                                            {opt}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <AnimatePresence>
-                                {step === 2 && (
-                                    <motion.form initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} onSubmit={handleSubmit} style={{ overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                                            <input type="text" placeholder="Your first name (optional)" value={name} onChange={e => setName(e.target.value)} style={{
-                                                width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '16px', outline: 'none'
-                                            }} onFocus={e => e.target.style.borderColor = 'var(--text-muted)'} onBlur={e => e.target.style.borderColor = 'var(--border)'} />
-                                            
-                                            <div>
-                                                <input type="email" placeholder="your@email.com (required)" required value={email} onChange={e => { setEmail(e.target.value); setErrorMsg(''); }} style={{
-                                                    width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s'
-                                                }} onFocus={e => e.target.style.borderColor = 'var(--accent)'} onBlur={e => e.target.style.borderColor = 'var(--border)'} />
-                                                {errorMsg && <div style={{ color: 'var(--red)', fontSize: '14px', marginTop: '8px' }}>{errorMsg}</div>}
-                                            </div>
-                                        </div>
-                                        
-                                        <button type="submit" disabled={status === 'loading'} style={{
-                                            width: '100%', background: 'var(--accent)', color: '#fff', padding: '18px', borderRadius: '12px', fontWeight: '700', fontSize: '18px',
-                                            opacity: status === 'loading' ? 0.7 : 1, cursor: status === 'loading' ? 'wait' : 'pointer'
-                                        }}>
-                                            {status === 'loading' ? 'Securing your spot...' : 'Claim My Spot on the Waitlist →'}
-                                        </button>
-                                        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', marginTop: '16px' }}>
-                                            No spam. Ever. Early access + ₹100 bonus credits on launch day.
-                                        </p>
-                                    </motion.form>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+  return (
+    <section className="hero">
+      <div className="hero-glow"></div>
+      <div className="hero-inner">
+        <div className="hero-left">
+          <div className="eyebrow"><span className="eyebrow-line"></span>India's Trading Arena</div>
+          <h1>
+            COMPETE<br/>
+            <span className="accent">TRADE</span>
+            <span className="dim">WIN</span>
+          </h1>
+          <p className="hero-desc">
+            India's first <strong>virtual stock trading tournament platform.</strong>
+            Compete with real NSE/BSE prices, zero risk — and real prizes.
+            No entry fee. Ever.
+          </p>
+          <div className="stats-row">
+            <div className="stat-item">
+              <div className="stat-num">{displayedCount.toLocaleString('en-IN')}</div>
+              <div className="stat-label">On Waitlist</div>
             </div>
-        </section>
-    );
+            <div className="stat-item">
+              <div className="stat-num">₹10L</div>
+              <div className="stat-label">Virtual Capital</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">FREE</div>
+              <div className="stat-label">Entry Fee</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="waitlist-card">
+          <div className="card-green-line"></div>
+          <div className="counter-badge">
+            <div className="counter-dots">
+              <div className="dot"></div><div className="dot"></div><div className="dot"></div>
+            </div>
+            <div className="counter-text"><span>{displayedCount.toLocaleString('en-IN')}</span> traders already waiting</div>
+          </div>
+
+          <div className="card-label">Join Waitlist</div>
+          <div className="card-title">Early Access + Priority Invite</div>
+          <div className="card-sub">First 100 users get free Finvox AI premium access.</div>
+
+          {status !== 'success' ? (
+            <div id="form-state">
+              <div className="form-group">
+                <input type="text" className={`form-input ${shakeField === 'name' ? 'shake' : ''}`} placeholder="Your name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} autoComplete="name" />
+              </div>
+              <div className="form-group">
+                <input type="tel" className={`form-input ${shakeField === 'phone' ? 'shake' : ''}`} placeholder="Phone number (10 digits)" maxLength="10" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} autoComplete="tel" />
+              </div>
+              <div className="form-group">
+                <input type="email" className={`form-input ${shakeField === 'email' ? 'shake' : ''}`} placeholder="Email address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} autoComplete="email" />
+              </div>
+              <div className="form-group">
+                <select className={`form-select ${shakeField === 'exp' ? 'shake' : ''}`} value={formData.exp} onChange={e => setFormData({...formData, exp: e.target.value})}>
+                  <option value="" disabled>Trading experience</option>
+                  <option value="beginner">Beginner — Never traded</option>
+                  <option value="some">Some — Paper/virtual traded</option>
+                  <option value="active">Active — Trade regularly</option>
+                  <option value="pro">Pro — Full-time trader</option>
+                </select>
+              </div>
+              <button className="submit-btn" disabled={status === 'loading'} onClick={handleSubmit}>
+                {status === 'loading' ? 'Submitting...' : 'Secure My Spot →'}
+              </button>
+              <div className="privacy-note">🔒 No spam. No entry fee. Ever.</div>
+            </div>
+          ) : (
+            <div className="success-state" style={{ display: 'block' }}>
+              <div className="success-icon">🎯</div>
+              <div className="success-title">YOU'RE IN!</div>
+              <div className="success-num">You are trader #<span>{position || displayedCount}</span> on the waitlist</div>
+              <div style={{ marginTop: '16px', fontSize: '13px', color: 'var(--muted)', fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.7 }}>
+                We'll notify you at launch.<br/>Watch your inbox.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 };
 
-const SocialProof = () => {
-    const quotes = [
-        { initial: 'R', name: 'Rahul M.', city: 'Mumbai', quote: 'Finally something for people who know stocks but can\'t risk real money!', color: '#00C853' },
-        { initial: 'P', name: 'Priya S.', city: 'Bangalore', quote: 'Dream11 for stocks? Day 1 sign up.', color: '#2979FF' },
-        { initial: 'A', name: 'Arjun K.', city: 'Delhi', quote: 'NSE fantasy is going to be massive.', color: '#FF9100' },
-        { initial: 'N', name: 'Neha T.', city: 'Pune', quote: 'As a CA student this is perfect.', color: '#D500F9' },
-        { initial: 'V', name: 'Vikram R.', city: 'Hyderabad', quote: 'Been trading for 5 years — this is exactly what the market needed.', color: '#FF1744' },
-        { initial: 'S', name: 'Sneha P.', city: 'Chennai', quote: 'Love that it\'s free to start. No risk, all learning.', color: '#FFD600' }
-    ];
+const HowItWorks = () => (
+  <div className="section-wrap">
+    <div className="section">
+      <div className="section-label">How It Works</div>
+      <div className="section-title">4 STEPS TO<br/>YOUR FIRST WIN</div>
+      <div className="steps">
+        <div className="step">
+          <div className="step-num">01</div>
+          <div className="step-icon">🏦</div>
+          <div className="step-title">Open Broker Account</div>
+          <div className="step-desc">Open a free Angel One demat account via our referral link. Takes 10 minutes. One-time only.</div>
+          <div className="step-tag">Free</div>
+        </div>
+        <div className="step">
+          <div className="step-num">02</div>
+          <div className="step-icon">⚔️</div>
+          <div className="step-title">Join a Tournament</div>
+          <div className="step-desc">Pick weekly or monthly competition. Get ₹10,00,000 in virtual money instantly. No entry fee.</div>
+          <div className="step-tag">Free</div>
+        </div>
+        <div className="step">
+          <div className="step-num">03</div>
+          <div className="step-icon">📈</div>
+          <div className="step-title">Trade Real Markets</div>
+          <div className="step-desc">Buy & sell NSE/BSE stocks at live market prices. Strategy is everything. Zero real money at risk.</div>
+          <div className="step-tag">Live Prices</div>
+        </div>
+        <div className="step">
+          <div className="step-num">04</div>
+          <div className="step-icon">🏆</div>
+          <div className="step-title">Win Real Prizes</div>
+          <div className="step-desc">Top performers win real cash every week and month. Prizes funded by us — not other players.</div>
+          <div className="step-tag">Real Prizes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
-    return (
-        <section style={{ padding: '80px 0', overflow: 'hidden' }}>
-            <h2 style={{ fontSize: '32px', textAlign: 'center', marginBottom: '40px' }}>Who's Joining?</h2>
-            <div className="ticker-wrap" style={{ position: 'relative', background: 'transparent', border: 'none', padding: 0 }}>
-                <div className="ticker-content" style={{ animationDuration: '40s' }}>
-                    {[...quotes, ...quotes].map((q, i) => (
-                        <div key={i} style={{ display: 'inline-block', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', margin: '0 12px', width: '350px', whiteSpace: 'normal', verticalAlign: 'top' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: q.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '18px' }}>
-                                    {q.initial}
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: '600' }}>{q.name}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{q.city}</div>
-                                </div>
-                            </div>
-                            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>"{q.quote}"</p>
-                        </div>
-                    ))}
-                </div>
+const Prizes = () => (
+  <div className="section">
+    <div className="section-label">Prize Structure</div>
+    <div className="section-title">WHAT YOU<br/>CAN WIN</div>
+
+    <div className="prizes-grid">
+      <div className="prize-card gold">
+        <div className="prize-rank">🥇 Weekly — 1st Place</div>
+        <div className="prize-amount">₹3,000</div>
+        <div className="prize-type">Bank transfer within 24 hours</div>
+        <div className="prize-bg">🏆</div>
+      </div>
+      <div className="prize-card silver">
+        <div className="prize-rank">🥈 Weekly — 2nd Place</div>
+        <div className="prize-amount">₹1,500</div>
+        <div className="prize-type">Bank transfer within 24 hours</div>
+        <div className="prize-bg">🥈</div>
+      </div>
+      <div className="prize-card bronze">
+        <div className="prize-rank">🥉 Weekly — 3rd Place</div>
+        <div className="prize-amount">₹500</div>
+        <div className="prize-type">+ Winner certificate for LinkedIn</div>
+        <div className="prize-bg">🎖️</div>
+      </div>
+    </div>
+
+    <div className="monthly-banner">
+      <div className="monthly-label">Monthly Grand Tournament</div>
+      <div className="monthly-amount">₹25,000</div>
+      <div className="monthly-sub">Top prize — 1st place monthly competition</div>
+    </div>
+  </div>
+);
+
+const FAQ = () => {
+  const faqs = [
+    { q: 'Is StockBattle completely free to join?', a: "Yes — 100% free. We never charge an entry fee. The only requirement is opening a free Angel One demat account using our referral link. We earn from brokerage commissions when you trade real markets — that's how we fund the prize pool." },
+    { q: 'Do I need to invest real money?', a: "Never. All trading on StockBattle is done with virtual money — ₹10,00,000 given to you at the start of each tournament. You trade real NSE/BSE stocks at live prices, but no real money is at risk. It's a 100% safe simulation." },
+    { q: 'Why do I need an Angel One account?', a: "This is how we keep the platform free for everyone. When you open an Angel One account via our link, we earn a referral commission — which we use to fund prizes and platform costs. The account itself is free to open and takes just 10 minutes." },
+    { q: 'How are prizes paid out?', a: "Prize money is transferred directly to your bank account within 24 hours of tournament end. Winners also receive a digital certificate they can share on LinkedIn. Prizes come from our revenue — not from other players' money." },
+    { q: 'When does StockBattle launch?', a: "We're targeting a launch in Q1 2026. Waitlist members get exclusive early access before the public launch, plus lifetime free premium tier for the first 500 signups. Join now to secure your spot." },
+  ];
+
+  const [openIdx, setOpenIdx] = useState(null);
+
+  return (
+    <div className="section-wrap-alt">
+      <div className="section">
+        <div className="section-label">FAQ</div>
+        <div className="section-title">QUESTIONS<br/>ANSWERED</div>
+
+        <div className="faq-list">
+          {faqs.map((faq, i) => (
+            <div key={i} className={`faq-item ${openIdx === i ? 'open' : ''}`} onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+              <div className="faq-q">{faq.q} <span className="faq-icon">+</span></div>
+              <div className="faq-a">{faq.a}</div>
             </div>
-        </section>
-    );
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const Footer = () => (
-    <footer style={{ background: 'var(--bg)', padding: '60px 20px', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
-        <h2 style={{ fontSize: '24px', marginBottom: '24px' }}><span style={{ color: 'var(--accent)' }}>STOCK</span><span style={{ color: '#FFF' }}>LEAGUE</span></h2>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '40px', color: 'var(--text-muted)' }}>
-            <a href="#" style={{ hover: { color: '#fff' } }}>Instagram</a>
-            <a href="#" style={{ hover: { color: '#fff' } }}>Twitter/X</a>
-            <a href="mailto:contact@stockleague.in">contact@stockleague.in</a>
-        </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 24px', lineHeight: '1.6' }}>
-            StockLeague is a fantasy gaming platform. No real money is invested in securities. All contests involve virtual portfolios only. For entertainment and financial literacy purposes.
-        </p>
-        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>© 2025 StockLeague. Made with 🇮🇳 in India.</div>
-    </footer>
+  <footer>
+    <div className="footer-logo">StockBattle</div>
+    <div className="footer-links">
+      <a href="#" className="footer-link">Privacy</a>
+      <a href="#" className="footer-link">Terms</a>
+      <a href="mailto:hello@stockbattle.in" className="footer-link">Contact</a>
+    </div>
+    <div className="footer-copy">© 2026 StockBattle. Not SEBI registered. Educational platform.</div>
+  </footer>
 );
 
 const Home = () => (
-    <>
-        <Navbar />
-        <Hero />
-        <Stats />
-        <HowItWorks />
-        <ContestPreview />
-        <WaitlistForm />
-        <SocialProof />
-        <Footer />
-    </>
+  <>
+    <Cursor />
+    <Navbar />
+    <Ticker />
+    <LiveBar />
+    <Hero />
+    <HowItWorks />
+    <Prizes />
+    <FAQ />
+    <Footer />
+  </>
 );
 
 const Admin = () => {
-    const [auth, setAuth] = useState(false);
-    const [pwd, setPwd] = useState('');
-    const [data, setData] = useState(null);
+  const [auth, setAuth] = useState(false);
+  const [pwd, setPwd] = useState('');
+  const [data, setData] = useState(null);
 
-    const checkPwd = async (e) => {
-        e.preventDefault();
-        if (pwd === import.meta.env.VITE_ADMIN_PASSWORD) {
-            try {
-                const res = await getAdminWaitlist(import.meta.env.VITE_ADMIN_SECRET);
-                setData(res);
-                setAuth(true);
-            } catch (err) {
-                alert('Invalid secret or network error');
-            }
-        } else {
-            alert('Wrong password');
-        }
-    };
-
-    const exportCSV = () => {
-        if (!data) return;
-        const headers = ['id', 'name', 'email', 'market_experience', 'ip_address', 'created_at'];
-        const rows = data.entries.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','));
-        const csv = [headers.join(','), ...rows].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `stockleague-waitlist-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-    };
-
-    if (!auth) {
-        return (
-            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <form onSubmit={checkPwd} style={{ background: 'var(--bg2)', padding: '40px', borderRadius: '12px', textAlign: 'center' }}>
-                    <h2 style={{ marginBottom: '24px' }}>Admin Login</h2>
-                    <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="Password" style={{ padding: '12px', width: '250px', marginBottom: '16px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: '#fff' }} />
-                    <br/>
-                    <button type="submit" style={{ background: 'var(--accent)', color: '#fff', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold' }}>Enter</button>
-                </form>
-            </div>
-        );
+  const checkPwd = async (e) => {
+    e.preventDefault();
+    if (pwd === import.meta.env.VITE_ADMIN_PASSWORD) {
+      try {
+        const res = await getAdminWaitlist(import.meta.env.VITE_ADMIN_SECRET);
+        setData(res);
+        setAuth(true);
+      } catch (err) {
+        alert('Invalid secret or network error');
+      }
+    } else {
+      alert('Wrong password');
     }
+  };
 
-    if (!data) return <div style={{ padding: '40px' }}>Loading...</div>;
+  const exportCSV = () => {
+    if (!data) return;
+    const headers = ['id', 'name', 'email', 'market_experience', 'ip_address', 'created_at'];
+    const rows = data.entries.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stockleague-waitlist-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
-    const mostCommon = Object.entries(data.byExperience).sort((a,b) => b[1]-a[1])[0][0];
-
+  if (!auth) {
     return (
-        <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                <h1 style={{ fontSize: '32px' }}>Admin Dashboard</h1>
-                <button onClick={exportCSV} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: '6px', color: '#fff' }}>Export CSV</button>
-            </div>
-
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
-                {[{ label: 'Total Signups', val: data.total }, { label: 'Today', val: data.today }, { label: 'This Week', val: data.thisWeek }, { label: 'Most Common', val: mostCommon }].map(s => (
-                    <div key={s.label} style={{ background: 'var(--bg2)', padding: '24px', borderRadius: '12px', flex: 1 }}>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '8px' }}>{s.label}</div>
-                        <div style={{ fontSize: s.label === 'Most Common' ? '18px' : '32px', fontWeight: 'bold' }}>{s.val}</div>
-                    </div>
-                ))}
-            </div>
-
-            <div style={{ marginBottom: '40px', background: 'var(--bg2)', padding: '24px', borderRadius: '12px' }}>
-                <h3 style={{ marginBottom: '16px' }}>Breakdown</h3>
-                <div style={{ display: 'flex', height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
-                    {Object.entries(data.byExperience).map(([key, val], i) => {
-                        const colors = ['#00C853', '#2979FF', '#FF9100', '#D500F9'];
-                        return <div key={key} style={{ width: `${(val/data.total)*100}%`, background: colors[i], height: '100%' }} title={`${key}: ${val}`} />
-                    })}
-                </div>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap', fontSize: '12px' }}>
-                    {Object.entries(data.byExperience).map(([key, val], i) => {
-                        const colors = ['#00C853', '#2979FF', '#FF9100', '#D500F9'];
-                        return <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: colors[i], borderRadius: '50%' }}/> {key} ({val})</div>
-                    })}
-                </div>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--font-mono)', fontSize: '14px' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                            <th style={{ padding: '12px' }}>#</th>
-                            <th style={{ padding: '12px' }}>Name</th>
-                            <th style={{ padding: '12px' }}>Email</th>
-                            <th style={{ padding: '12px' }}>Answer</th>
-                            <th style={{ padding: '12px' }}>Date</th>
-                            <th style={{ padding: '12px' }}>IP</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.entries.map(row => (
-                            <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '12px' }}>{row.id}</td>
-                                <td style={{ padding: '12px' }}>{row.name || '-'}</td>
-                                <td style={{ padding: '12px' }}>{row.email}</td>
-                                <td style={{ padding: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={row.market_experience}>{row.market_experience}</td>
-                                <td style={{ padding: '12px' }}>{new Date(row.created_at).toLocaleString('en-IN')}</td>
-                                <td style={{ padding: '12px' }}>{row.ip_address}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <form onSubmit={checkPwd} style={{ background: 'var(--bg2)', padding: '40px', borderRadius: '12px', textAlign: 'center' }}>
+          <h2 style={{ marginBottom: '24px' }}>Admin Login</h2>
+          <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="Password" style={{ padding: '12px', width: '250px', marginBottom: '16px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }} />
+          <br/>
+          <button type="submit" style={{ background: 'var(--green)', color: '#071A0E', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>Enter</button>
+        </form>
+      </div>
     );
+  }
+
+  if (!data) return <div style={{ padding: '40px' }}>Loading...</div>;
+
+  const mostCommon = Object.entries(data.byExperience).sort((a,b) => b[1]-a[1])[0][0];
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Syne, sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '32px' }}>Admin Dashboard</h1>
+        <button onClick={exportCSV} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: '6px', color: 'var(--text)', cursor: 'pointer' }}>Export CSV</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
+        {[{ label: 'Total Signups', val: data.total }, { label: 'Today', val: data.today }, { label: 'This Week', val: data.thisWeek }, { label: 'Most Common', val: mostCommon }].map(s => (
+          <div key={s.label} style={{ background: 'var(--bg2)', padding: '24px', borderRadius: '12px', flex: 1, border: '1px solid var(--border2)' }}>
+            <div style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '8px' }}>{s.label}</div>
+            <div style={{ fontSize: s.label === 'Most Common' ? '18px' : '32px', fontWeight: 'bold' }}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginBottom: '40px', background: 'var(--bg2)', padding: '24px', borderRadius: '12px', border: '1px solid var(--border2)' }}>
+        <h3 style={{ marginBottom: '16px' }}>Breakdown</h3>
+        <div style={{ display: 'flex', height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
+          {Object.entries(data.byExperience).map(([key, val], i) => {
+            const colors = ['#00D46A', '#2D3A4E', '#F5B731', '#9AAABB'];
+            return <div key={key} style={{ width: `${(val/data.total)*100}%`, background: colors[i], height: '100%' }} title={`${key}: ${val}`} />
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap', fontSize: '12px' }}>
+          {Object.entries(data.byExperience).map(([key, val], i) => {
+            const colors = ['#00D46A', '#2D3A4E', '#F5B731', '#9AAABB'];
+            return <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: colors[i], borderRadius: '50%' }}/> {key} ({val})</div>
+          })}
+        </div>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'JetBrains Mono, monospace', fontSize: '14px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
+              <th style={{ padding: '12px' }}>#</th>
+              <th style={{ padding: '12px' }}>Name</th>
+              <th style={{ padding: '12px' }}>Email</th>
+              <th style={{ padding: '12px' }}>Answer</th>
+              <th style={{ padding: '12px' }}>Date</th>
+              <th style={{ padding: '12px' }}>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.entries.map(row => (
+              <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '12px' }}>{row.id}</td>
+                <td style={{ padding: '12px' }}>{row.name || '-'}</td>
+                <td style={{ padding: '12px' }}>{row.email}</td>
+                <td style={{ padding: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={row.market_experience}>{row.market_experience}</td>
+                <td style={{ padding: '12px' }}>{new Date(row.created_at).toLocaleString('en-IN')}</td>
+                <td style={{ padding: '12px' }}>{row.ip_address}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 const App = () => (
-    <BrowserRouter>
-        <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/admin" element={<Admin />} />
-        </Routes>
-    </BrowserRouter>
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/admin" element={<Admin />} />
+    </Routes>
+  </BrowserRouter>
 );
 
 const root = createRoot(document.getElementById('root'));
