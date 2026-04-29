@@ -10,8 +10,24 @@ dotenv.config();
 
 const app = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
+const allowedOrigins = [
+  'https://myone-seven.vercel.app',
+  'https://www.stockbattle.in',
+  'https://stockbattle.in',
+  'http://localhost:5173'
+];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://myone-seven.vercel.app',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
