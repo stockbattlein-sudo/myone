@@ -37,10 +37,10 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
 app.set('trust proxy', 1);
-
+const isRenderDb = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com');
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: (process.env.NODE_ENV === 'production' || isRenderDb) ? { rejectUnauthorized: false } : false
 });
 
 pool.query(`
@@ -48,6 +48,7 @@ pool.query(`
         id SERIAL PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         name TEXT,
+        phone TEXT,
         market_experience TEXT,
         ip_address TEXT,
         country TEXT,
@@ -56,7 +57,10 @@ pool.query(`
         referrer TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
     );
-`).catch(console.error);
+`).then(() => {
+    return pool.query(`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS phone TEXT;`);
+}).catch(console.error);
+
 
 let transporter;
 if (process.env.EMAIL_PROVIDER === 'gmail') {
@@ -96,7 +100,7 @@ const joinLimiter = rateLimit({
 let cache = { count: 0, fetchedAt: 0 };
 
 app.post('/api/waitlist/join', joinLimiter, async (req, res) => {
-    const { email, name, marketExperience } = req.body;
+    const { email, name, phone, marketExperience } = req.body;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ success: false, message: 'Invalid email' });
     }
@@ -112,9 +116,9 @@ app.post('/api/waitlist/join', joinLimiter, async (req, res) => {
         }
 
         const insert = await pool.query(
-            `INSERT INTO waitlist (email, name, market_experience, ip_address, user_agent, referrer)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-            [email, name, marketExperience, ipAddress, userAgent, referrer]
+            `INSERT INTO waitlist (email, name, phone, market_experience, ip_address, user_agent, referrer)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [email, name, phone || null, marketExperience || null, ipAddress, userAgent, referrer]
         );
         
         const position = insert.rows[0].id;
@@ -125,7 +129,7 @@ app.post('/api/waitlist/join', joinLimiter, async (req, res) => {
             fetch(process.env.ZAPIER_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, name, marketExperience, position, createdAt: new Date().toISOString() })
+                body: JSON.stringify({ email, name, phone, marketExperience, position, createdAt: new Date().toISOString() })
             }).catch(() => {});
         }
 
@@ -157,7 +161,8 @@ app.post('/api/waitlist/join', joinLimiter, async (req, res) => {
         const ownerHtml = `
             Name: ${name || 'N/A'}<br/>
             Email: ${email}<br/>
-            Answer: ${marketExperience}<br/>
+            Phone: ${phone || 'N/A'}<br/>
+            Answer: ${marketExperience || 'N/A'}<br/>
             Position: #${position}<br/>
             Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}<br/>
             IP: ${ipAddress}
