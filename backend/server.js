@@ -43,23 +43,29 @@ const pool = new pg.Pool({
     ssl: (process.env.NODE_ENV === 'production' || isRenderDb) ? { rejectUnauthorized: false } : false
 });
 
-pool.query(`
-    CREATE TABLE IF NOT EXISTS waitlist (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        name TEXT,
-        phone TEXT,
-        market_experience TEXT,
-        ip_address TEXT,
-        country TEXT,
-        city TEXT,
-        user_agent TEXT,
-        referrer TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-`).then(() => {
-    return pool.query(`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS phone TEXT;`);
-}).catch(console.error);
+const initDb = async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS waitlist (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                name TEXT,
+                phone TEXT,
+                market_experience TEXT,
+                ip_address TEXT,
+                country TEXT,
+                city TEXT,
+                user_agent TEXT,
+                referrer TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+        await pool.query(`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS phone TEXT;`);
+        console.log('Database schema ready.');
+    } catch (e) {
+        console.error('Database init error:', e.message);
+    }
+};
 
 
 let transporter;
@@ -239,6 +245,9 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+
+initDb().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
 });
