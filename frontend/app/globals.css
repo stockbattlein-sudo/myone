@@ -637,7 +637,8 @@ input, select { font-family: inherit; }
 
 .table-scroll-wrap {
   border-radius: 24px;
-  overflow: hidden; 
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   transition: opacity 0.4s ease;
 }
 
@@ -1223,19 +1224,31 @@ input, select { font-family: inherit; }
   .nav-links, .btn-login { display: none; }
   .hamburger { display: flex; }
 
-  .hero-container { padding: 120px 20px 60px; }
-  .hero-inner { align-items: center; text-align: center; }
-  .asset-tags, .cta-stack { justify-content: center; }
+  .navbar { padding: 0 20px; }
+  .hero-container { padding: 110px 16px 50px; }
+  .hero-inner { align-items: center; text-align: center; width: 100%; }
+  .hero h1 { font-size: clamp(30px, 8vw, 44px); line-height: 1.2; word-break: keep-all; }
+  .asset-tags, .cta-stack { justify-content: center; gap: 10px; }
+  .btn-cta-primary, .btn-whatsapp { padding: 14px 24px; font-size: 15px; width: 100%; justify-content: center; }
+  .video-overlay { background: linear-gradient(180deg, rgba(5, 5, 5, 0.6) 0%, var(--bg-primary) 100%); opacity: 0.85; }
   
-  .section { padding: 60px 20px; }
+  .section { padding: 50px 16px; }
   
-  .steps-grid, .features-grid, .scale-grid, .footer-grid { grid-template-columns: 1fr; }
-  .assessment-table th, .assessment-table td { padding: 16px 12px; font-size: 13px; }
+  .steps-grid, .features-grid, .scale-grid, .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .step-card, .feature-card { padding: 24px; }
+  .scale-chart, .calc-card { padding: 24px 20px; }
+  
+  .assessment-table th, .assessment-table td { padding: 14px 10px; font-size: 13px; }
+  .tier-name { font-size: 20px; margin-bottom: 12px; }
+  .btn-tier { padding: 10px 20px; font-size: 13px; }
+  .tier-price { font-size: 18px; }
 
-  .waitlist-inner { grid-template-columns: 1fr; gap: 40px; }
-  .waitlist-page { padding: 120px 20px 40px; }
-  
-  .waitlist-form-card { padding: 32px 24px; }
+  .waitlist-inner { grid-template-columns: 1fr; gap: 32px; }
+  .waitlist-page { padding: 110px 16px 40px; }
+  .waitlist-left h1 { font-size: clamp(32px, 8vw, 44px); text-align: center; }
+  .callout-block { margin-bottom: 24px; padding: 16px; border-radius: 12px; text-align: center; border-left: none; border-top: 4px solid var(--accent); }
+  .waitlist-left { display: flex; flex-direction: column; align-items: center; }
+  .waitlist-form-card { padding: 28px 20px; width: 100%; }
 }
 
 /* ============================================
