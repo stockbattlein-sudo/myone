@@ -14,7 +14,8 @@ const allowedOrigins = [
   'https://myone-seven.vercel.app',
   'https://www.stockbattle.in',
   'https://stockbattle.in',
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'http://localhost:3000'
 ];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
@@ -22,7 +23,10 @@ if (process.env.FRONTEND_URL) {
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow any Vercel preview/production deployment
+    if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -37,10 +41,11 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
 app.set('trust proxy', 1);
-const isRenderDb = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com');
+const dbUrl = process.env.DATABASE_URL || '';
+const requireSsl = process.env.NODE_ENV === 'production' || dbUrl.includes('render.com') || dbUrl.includes('supabase.com') || dbUrl.includes('ssl=true');
 const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: (process.env.NODE_ENV === 'production' || isRenderDb) ? { rejectUnauthorized: false } : false
+    connectionString: dbUrl,
+    ssl: requireSsl ? { rejectUnauthorized: false } : false
 });
 
 const initDb = async () => {
@@ -246,8 +251,9 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-initDb().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+// Start server immediately so it can respond to health checks and CORS preflight,
+// then initialize the database schema in the background.
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    initDb();
 });

@@ -4,5 +4,8 @@ dist/
 .DS_Store
 .env.local
 gemini-code-*.html
-
+.next/
+frontend-next-trash/
+frontend-vite-old/
 .vercel
+
