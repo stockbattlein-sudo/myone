@@ -24,7 +24,7 @@ services:
           property: connectionString
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: stockbattle-redis
           property: connectionString
       # Auto-generated 32+ character cryptographically secure secrets
@@ -67,11 +67,12 @@ services:
       - key: PORT
         value: 3000
 
-  # ── Managed Redis Cache Service ─────────────────────────────
-  - type: redis
+  # ── Managed Redis (Key Value) Cache Service ────────────────
+  - type: keyvalue
     name: stockbattle-redis
     plan: starter
     region: singapore
+    maxmemoryPolicy: allkeys-lru
 
 # ── Managed PostgreSQL Database ──────────────────────────────
 databases:
