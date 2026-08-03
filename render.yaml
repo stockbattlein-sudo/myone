@@ -72,6 +72,9 @@ services:
     plan: starter
     region: singapore
     maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
 
 # ── Managed PostgreSQL Database ──────────────────────────────
 databases:
