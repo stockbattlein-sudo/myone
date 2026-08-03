@@ -14,8 +14,8 @@ WORKDIR /app
 #
 # NEXT_PUBLIC_API_URL: Backend API URL for the /api/* rewrite proxy in next.config.ts
 # NEXT_PUBLIC_WS_URL:  WebSocket URL for live price ticks in the trading terminal
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_API_URL=https://api.stockbattle.in
+ARG NEXT_PUBLIC_WS_URL=https://api.stockbattle.in
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
 

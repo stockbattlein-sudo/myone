@@ -6,7 +6,7 @@ services:
   # ── NestJS API Backend Service ─────────────────────────────
   - type: web
     name: stockbattle-api
-    env: docker
+    runtime: docker
     dockerfilePath: apps/api/Dockerfile
     dockerContext: .
     plan: starter
@@ -50,22 +50,21 @@ services:
   # ── Next.js Web Frontend Service ────────────────────────────
   - type: web
     name: stockbattle-web
-    env: docker
+    runtime: docker
     dockerfilePath: apps/web/Dockerfile
     dockerContext: .
     plan: starter
     region: singapore
     healthCheckPath: /
-    dockerBuildArgs:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://api.stockbattle.in
-      - key: NEXT_PUBLIC_WS_URL
-        value: https://api.stockbattle.in
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.stockbattle.in
+      - key: NEXT_PUBLIC_WS_URL
+        value: https://api.stockbattle.in
 
   # ── Managed Redis (Key Value) Cache Service ────────────────
   - type: keyvalue
