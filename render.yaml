@@ -1,0 +1,82 @@
+# ═══════════════════════════════════════════════════════════════
+# StockBattle — Render Production & Staging Blueprint
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ── NestJS API Backend Service ─────────────────────────────
+  - type: web
+    name: stockbattle-api
+    env: docker
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: singapore # Low latency for Indian market data simulation
+    preDeployCommand: cd apps/api && npx prisma migrate deploy
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stockbattle-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: stockbattle-redis
+          property: connectionString
+      # Auto-generated 32+ character cryptographically secure secrets
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CERTIFICATE_SECRET
+        generateValue: true
+      # Domain & Auth Configuration
+      - key: FRONTEND_URL
+        value: https://app.stockbattle.in
+      - key: CORS_ORIGIN
+        value: https://app.stockbattle.in
+      - key: COOKIE_DOMAIN
+        value: .stockbattle.in # Enables cross-subdomain auth between app. and api.
+      # External Provider Secrets (Prompts manually in Render UI upon Blueprint creation)
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  # ── Next.js Web Frontend Service ────────────────────────────
+  - type: web
+    name: stockbattle-web
+    env: docker
+    dockerfilePath: apps/web/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: singapore
+    healthCheckPath: /
+    dockerBuildArgs:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.stockbattle.in
+      - key: NEXT_PUBLIC_WS_URL
+        value: https://api.stockbattle.in
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+
+  # ── Managed Redis Cache Service ─────────────────────────────
+  - type: redis
+    name: stockbattle-redis
+    plan: starter
+    region: singapore
+
+# ── Managed PostgreSQL Database ──────────────────────────────
+databases:
+  - name: stockbattle-db
+    databaseName: stockbattle
+    user: stockbattle
+    plan: starter
+    region: singapore

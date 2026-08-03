@@ -1,58 +1,48 @@
-# StockLeague - Fantasy Stock Market
+# StockBattle
 
-## 🚀 Waitlist Launch Platform
+AI-native prop-trading evaluation platform (simulation-only). Traders pay a one-time fee to attempt a simulated risk-management challenge using live/near-live market data and virtual capital.
 
-This repository contains the full stack application for the StockLeague pre-launch waitlist.
-It features a high-performance React frontend and a robust Node.js/PostgreSQL backend.
+## Quick Start
 
-### Project Structure
-- `/frontend` - React + Vite application
-- `/backend`  - Node.js + Express application
+```bash
+# Prerequisites: Node.js 18+, pnpm 9+, Docker
 
----
+# 1. Start databases
+pnpm docker:up
 
-## 💻 Local Development Setup
+# 2. Install dependencies
+pnpm install
 
-### 1. Database Setup
-1. Ensure PostgreSQL is installed and running locally.
-2. Create a local database named `stockleague`.
+# 3. Run database migrations
+pnpm db:migrate:dev
 
-### 2. Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. The `.env` file is already created. Make sure your `DATABASE_URL` matches your local Postgres credentials (default is `postgresql://postgres:postgres@localhost:5432/stockleague`).
-4. Start the server:
-   ```bash
-   npm run dev
-   ```
-   The backend will run on http://localhost:3001 and automatically create the `waitlist` table.
+# 4. Start development servers
+pnpm dev
+# → API: http://localhost:3001/api
+# → Web: http://localhost:3000
+```
 
-### 3. Frontend Setup
-1. Open a new terminal and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   The frontend will run on http://localhost:5173. The Vite config automatically proxies `/api` requests to the local backend.
+## Project Structure
 
----
+```
+stockbattle/
+├── apps/
+│   ├── api/          # NestJS backend (auth, business logic)
+│   └── web/          # Next.js frontend (dashboard, auth pages)
+├── packages/
+│   └── shared/       # Shared types, constants, validation (Zod)
+├── scripts/          # Utility scripts (waitlist export)
+├── docker-compose.yml
+└── .env.example
+```
 
-## 🛠️ Admin Dashboard
-To view the admin dashboard locally:
-1. Navigate to `http://localhost:5173/admin`
-2. Enter the password defined in your Vite `.env` (or whatever you set for `VITE_ADMIN_PASSWORD`).
+## Tech Stack
 
-For deployment instructions, see `DEPLOY.md`.
+- **Frontend:** Next.js 15, React 19, Tailwind CSS v4
+- **Backend:** NestJS 10, Prisma, PostgreSQL 16, Redis 7
+- **Auth:** JWT (httpOnly cookies), OTP via email
+- **Monorepo:** pnpm workspaces
+
+## Important
+
+> StockBattle is a simulation-based evaluation platform. No real capital is deployed. All trading is simulated. Performance-based incentives are internal program rewards, not investment returns.

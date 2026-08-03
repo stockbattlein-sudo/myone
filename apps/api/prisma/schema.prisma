@@ -1,0 +1,261 @@
+// ──────────────────────────────────────────────
+// StockBattle — Prisma Schema
+// Source of truth for all database models.
+// ──────────────────────────────────────────────
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────
+
+enum Role {
+  TRADER
+  ADMIN
+}
+
+enum OtpType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+// ── User ──────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  phone         String?  @unique
+  name          String
+  passwordHash  String
+  role          Role     @default(TRADER)
+  emailVerified Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  otpCodes      OtpCode[]
+  refreshTokens RefreshToken[]
+  userChallenges UserChallenge[]
+  walletTransactions WalletTransaction[]
+  orders        UserOrder[]
+  positions     UserPosition[]
+  adminAuditLogs AdminAuditLog[]
+
+  @@map("users")
+}
+
+// ── OTP Codes ─────────────────────────────────
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      OtpType
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, used])
+  @@map("otp_codes")
+}
+
+// ── Refresh Tokens ────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── Challenge & Wallet Ledger Models ──────────
+
+enum ChallengeType {
+  ONE_STEP
+  TWO_STEP
+  INSTANT
+}
+
+enum ChallengeStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  PASSED
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BONUS
+  REFERRAL_CREDIT
+  CHALLENGE_PURCHASE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model ChallengeTier {
+  id              String         @id @default(cuid())
+  name            String
+  type            ChallengeType
+  priceInPaise    Int            // Pricing stored as integer in paise (e.g. 299900)
+  accountSize     Float          // Virtual starting capital (e.g. 500000.0)
+  targetPhase1    Float          // e.g. 10.0 for 10% (0.0 for Instant)
+  targetPhase2    Float?         // e.g. 5.0 for 2-step (null for 1-step/instant)
+  maxLoss         Float          // e.g. 10.0 for 10%
+  dailyLossLimit  Float          // e.g. 3.0 for 3%
+  minTradingDays  Int            // e.g. 5 (0 for Instant)
+  newsTrading     Boolean        @default(true)
+  weekendHolding  Boolean        @default(false)
+  payoutSchedule  String         // e.g. "Weekly", "Bi-weekly"
+  profitShare     Float          @default(80.0)
+  consistencyRule Float?         // e.g. 15.0 representing 15% Consistency (only for Instant)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  userChallenges  UserChallenge[]
+
+  @@map("challenge_tiers")
+}
+
+model UserChallenge {
+  id                          String          @id @default(cuid())
+  userId                      String
+  tierId                      String
+  status                      ChallengeStatus @default(PENDING_PAYMENT)
+  currentPhase                Int             @default(1)
+  virtualBalanceInPaise       Int             @default(0) // Stored in paise (e.g. 50000000 paise for ₹5L)
+  dailyStartingBalanceInPaise Int             @default(0) // Added to track daily starting capital baseline
+  peakDailyEquityInPaise      Int?            // Added for Trailing Intraday Daily Loss (Model C)
+  failureReason               String?         // Stores why a challenge failed (e.g. "Daily Loss Limit Breached")
+  startDate                   DateTime        @default(now())
+  endDate                     DateTime?
+  rulesSnapshot               Json            // Snapshot of rule limits at purchase
+  createdAt                   DateTime        @default(now())
+  updatedAt                   DateTime        @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier         ChallengeTier  @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  orders       UserOrder[]
+  positions    UserPosition[]
+  dailyMetrics DailyMetric[]
+
+  @@map("user_challenges")
+}
+
+model WalletTransaction {
+  id             String            @id @default(cuid())
+  userId         String
+  amountInPaise  Int               // Positive for credits, negative for debits
+  type           TransactionType
+  status         TransactionStatus @default(PENDING)
+  referenceId    String?           // e.g. Razorpay order ID or transaction ID
+  metadata       Json?             // e.g. { challengeId: '...' }
+  createdAt      DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+model UserOrder {
+  id           String      @id @default(cuid())
+  userId       String
+  challengeId  String
+  symbol       String      // e.g. "RELIANCE"
+  side         OrderSide
+  type         OrderType
+  status       OrderStatus @default(PENDING)
+  quantity     Int
+  priceInPaise        Int         // Limit price or executed price
+  realizedPnLInPaise Int?        // Realized P&L in paise for position-closing/reducing orders
+  executedAt          DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge UserChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("user_orders")
+}
+
+model UserPosition {
+  id                  String   @id @default(cuid())
+  userId              String
+  challengeId         String
+  symbol              String   // e.g. "RELIANCE"
+  quantity            Int      // Net quantity (positive for long, negative for short)
+  averagePriceInPaise Int      // Volume-weighted average entry price in paise
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge UserChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, symbol])
+  @@map("user_positions")
+}
+
+model DailyMetric {
+  id                    String        @id @default(cuid())
+  challengeId           String
+  date                  String        // YYYY-MM-DD in Asia/Kolkata
+  startingBalanceInPaise Int
+  closingBalanceInPaise  Int
+  realizedPnLInPaise    Int           @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  challenge             UserChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, date])
+  @@map("daily_metrics")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // e.g. "OVERRIDE_CHALLENGE_STATUS", "FORCE_SQUARE_OFF"
+  targetId  String   // challengeId or userId
+  reason    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  @@map("admin_audit_logs")
+}

@@ -1,0 +1,26 @@
+{
+  "name": "stockbattle",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:api": "pnpm --filter @stockbattle/api dev",
+    "dev:web": "pnpm --filter @stockbattle/web dev",
+    "build": "pnpm --filter @stockbattle/api build && pnpm --filter @stockbattle/web build",
+    "db:generate": "pnpm --filter @stockbattle/api db:generate",
+    "db:migrate": "pnpm --filter @stockbattle/api db:migrate",
+    "db:migrate:dev": "pnpm --filter @stockbattle/api db:migrate:dev",
+    "db:studio": "pnpm --filter @stockbattle/api db:studio",
+    "db:seed": "pnpm --filter @stockbattle/api db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "clean": "pnpm -r exec -- rm -rf node_modules dist .next out",
+    "export:waitlist": "node scripts/export-waitlist.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "axios": "^1.18.1"
+  }
+}

@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ── StockBattle High-Craft Enterprise Theme ── */
+
+@theme {
+  /* High-Craft Dark Palette */
+  --color-bg-primary: #14151A;
+  --color-bg-secondary: #1B1D24;
+  --color-bg-card: #21232C;
+  --color-bg-input: #282A35;
+
+  --color-accent-purple: #7C6AEF;
+  --color-accent-purple-hover: #9787FF;
+  --color-accent-green: #34D399;
+  --color-accent-green-hover: #059669;
+  --color-accent-blue: #3B82F6;
+  --color-accent-warning: #F5B450;
+
+  --color-text-primary: #EEEFF3;
+  --color-text-secondary: #9A9FAE;
+  --color-text-muted: #686D7D;
+  --color-text-danger: #F87171;
+
+  --color-border-default: #2B2E39;
+  --color-border-subtle: #212330;
+  --color-border-focus: #7C6AEF;
+
+  /* Fonts */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+/* ── Base Styles ───────────────────────────── */
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── High-Craft Cards ───────────────────────── */
+
+.glass-card, .sb-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.2), 0 8px 24px -18px rgba(0,0,0,0.5);
+}
+
+/* ── Gradient Text ─────────────────────────── */
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-accent-purple-hover), var(--color-accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Focus Ring ────────────────────────────── */
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(124, 106, 239, 0.18);
+}
+
+/* ── Scrollbar ─────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ── Animations ────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 106, 239, 0.15); }
+  50%      { box-shadow: 0 0 30px rgba(124, 106, 239, 0.35); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

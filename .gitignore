@@ -1,11 +1,51 @@
+# Dependencies
 node_modules/
-dist/
+.pnpm-store/
+
+# Environment
 .env
-.DS_Store
 .env.local
-gemini-code-*.html
+.env.*.local
+
+# Build output
+dist/
 .next/
+out/
 frontend-next-trash/
 frontend-vite-old/
-.vercel
+.vercel/
 
+# Browser test profiles & IDE artifacts
+.chrome_profile/
+.gemini/
+.tempmediaStorage/
+*.png
+*.jpg
+*.jpeg
+trader_dashboard.png
+stockbattle-dashboard.jsx
+brain.md
+implementation_plan.md
+
+# Prisma
+apps/api/prisma/migrations/**/migration_lock.toml
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs & Testing
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+
+# Local Docker volumes & exports
+postgres_data/
+redis_data/
+waitlist-export-*.csv
+.turbo/
